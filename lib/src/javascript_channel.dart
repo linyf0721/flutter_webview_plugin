@@ -12,8 +12,8 @@ class JavascriptChannel {
     @required this.name,
     @required this.onMessageReceived,
   })  : assert(name != null),
-        assert(onMessageReceived != null),
-        assert(_validChannelNames.hasMatch(name));
+        assert(onMessageReceived != null);
+  // assert(_validChannelNames.hasMatch(name));
 
   /// The channel's name.
   ///

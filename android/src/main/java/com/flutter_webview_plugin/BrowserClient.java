@@ -61,6 +61,7 @@ public class BrowserClient extends WebViewClient {
 
     }
 
+
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {

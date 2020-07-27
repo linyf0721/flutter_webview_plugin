@@ -264,6 +264,14 @@ class WebviewManager {
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
             }
+
+            @Override
+            public void onReceivedTitle(WebView view, String title) {
+                super.onReceivedTitle(view, title);
+                Map<String, Object> args = new HashMap<>();
+                args.put("title", title);
+                FlutterWebviewPlugin.channel.invokeMethod("onChangeTitle", args);
+            }
         });
         registerJavaScriptChannelNames(channelNames);
     }

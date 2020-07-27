@@ -144,6 +144,9 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
     self.webview.scrollView.showsVerticalScrollIndicator = [scrollBar boolValue];
     
     [self.webview addObserver:self forKeyPath:@"estimatedProgress" options:NSKeyValueObservingOptionNew context:NULL];
+    
+    [self.webview addObserver:self forKeyPath:@"title" options:NSKeyValueObservingOptionNew context:NULL];
+
 
     WKPreferences* preferences = [[self.webview configuration] preferences];
     if ([withJavascript boolValue]) {
@@ -194,18 +197,21 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
 - (void)navigate:(FlutterMethodCall*)call {
     if (self.webview != nil) {
             NSString *url = call.arguments[@"url"];
-            NSNumber *withLocalUrl = call.arguments[@"withLocalUrl"];
-            if ( [withLocalUrl boolValue]) {
-                NSURL *htmlUrl = [NSURL fileURLWithPath:url isDirectory:false];
-                NSString *localUrlScope = call.arguments[@"localUrlScope"];
+            
+            NSString *scheme = [[NSURL URLWithString:url] scheme];
+        
+            if ([scheme isEqualToString:@"file"]) {
                 if (@available(iOS 9.0, *)) {
-                    if(localUrlScope == nil) {
-                        [self.webview loadFileURL:htmlUrl allowingReadAccessToURL:htmlUrl];
-                    }
-                    else {
-                        NSURL *scopeUrl = [NSURL fileURLWithPath:localUrlScope];
-                        [self.webview loadFileURL:htmlUrl allowingReadAccessToURL:scopeUrl];
-                    }
+                    NSURL* nsUrl = [NSURL URLWithString:url];
+                           
+                    NSArray *array = [url componentsSeparatedByString:@"?"];
+                           
+                    NSString* urlFilePath = array[0] ;
+                           
+                    NSURL* nsUrlPath = [NSURL URLWithString:urlFilePath];
+                    
+                    [self.webview loadFileURL:nsUrl allowingReadAccessToURL:[nsUrlPath URLByDeletingLastPathComponent]];
+                    
                 } else {
                     @throw @"not available on version earlier than ios 9.0";
                 }
@@ -244,7 +250,12 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    if ([keyPath isEqualToString:@"estimatedProgress"] && object == self.webview) {
+    if ([keyPath isEqualToString:@"title"] && object == self.webview ){
+         // 获取当前title
+         NSString *webTitle = nil;
+         webTitle = self.webview.title;
+         [channel invokeMethod:@"onChangeTitle" arguments:@{@"title" : webTitle}];
+    } else if ([keyPath isEqualToString:@"estimatedProgress"] && object == self.webview) {
         [channel invokeMethod:@"onProgressChanged" arguments:@{@"progress": @(self.webview.estimatedProgress)}];
     } else {
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
@@ -257,6 +268,7 @@ static NSString *const CHANNEL_NAME = @"flutter_webview_plugin";
         [self.webview removeFromSuperview];
         self.webview.navigationDelegate = nil;
         [self.webview removeObserver:self forKeyPath:@"estimatedProgress"];
+        [self.webview removeObserver:self forKeyPath:@"title"];
         self.webview = nil;
 
         // manually trigger onDestroy
